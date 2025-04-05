@@ -1,0 +1,28 @@
+A command-line tool for generating Julia set fractals.
+
+Usage
+=====
+
+```bash
+python run.py <density-pixel> <detail-density> <cr> <ci> [options]
+```
+
+Required Arguments
+==================
+- `density-pixel`: Resolution of the output image
+- `detail-density`: Level of detail in the fractal
+- `cr`: Real part of complex parameter c
+- `ci`: Imaginary part of complex parameter c
+
+Optional Arguments
+==================
+- `-c, --color THEME`: Color theme for the fractal
+- `-s, --save FILENAME`: Save the output to an image file
+
+Example
+=======
+```bash
+python run.py 500 300 -0.4 0.6 -c "inferno" -s "output.jpg"
+```
+
+Use `--help` for detailed information about all available options.
