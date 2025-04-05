@@ -1,0 +1,12 @@
+LISEK
+
+A simple concatenative programming language.
+
+Lisek is a stack-based concatenative language, designed as a learning experiment. It features:
+- Basic arithmetic operations
+- Boolean logic
+- Conditionals and loops
+- String manipulation
+- Simple variable declarations
+
+License: GNU GPL v3

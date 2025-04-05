@@ -31,13 +31,13 @@
           cargo = toolchain;
         };
 
-        risk = naersk-lib.buildPackage {
+        lenia = naersk-lib.buildPackage {
           name = "lenia";
           src = ./.;
         };
       in {
-        packages.risk = risk;
-        defaultPackage = self.packages.${system}.risk;
+        packages.lenia = lenia;
+        defaultPackage = self.packages.${system}.lenia;
 
         devShell = pkgs.mkShell rec {
           packages = with pkgs; [

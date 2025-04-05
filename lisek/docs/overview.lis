@@ -1,0 +1,12 @@
+let foo 9
+let baz (+ 4 (- 2 1))
+
+cond (= baz (- foo 4)) {
+    format "TRUE"
+} {
+    format "FALSE"
+}
+
+loop {
+    format "Egg."
+}

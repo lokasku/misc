@@ -29,13 +29,13 @@
           cargo = toolchain;
         };
 
-        russs = naersk-lib.buildPackage {
-          name = "russs";
+        lisek = naersk-lib.buildPackage {
+          name = "lisek";
           src = ./.;
         };
       in {
-        packages.russs = russs;
-        defaultPackage = self.packages.${system}.russs;
+        packages.lisek = lisek;
+        defaultPackage = self.packages.${system}.lisek;
 
         devShell = pkgs.mkShell rec {
           packages = with pkgs; [ toolchain ];
