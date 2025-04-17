@@ -1,0 +1,6 @@
+(library
+ (name descartes)
+ (public_name descartes)
+ (modules types label report format charset write)
+ (preprocess
+  (pps ppx_deriving.show)))
