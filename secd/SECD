@@ -1,0 +1,417 @@
+SECD Virtual Machine
+
+
+An interesting approach to programming language implementation is
+to compile a programs of a language to the code of a virtual machine.
+A virtual machine is not a real, hardware machine. It has its own machine
+instructions, and eventually it needs to be implemented on a real machine.
+
+The idea of compiling a language into a virtual machine is very old.
+However, more recently this idea has become popular in some object-oriented
+languages such as Java, where a program is compiled to what is called
+byte code, which is the language of a virtual machine called
+Java virtual machine. The purpose of Java virtual machine
+is portability. If you want your computer (any computer) to run Java programs,
+all you need to do is to implement an interpreter that runs on the byte code.
+This is especially important to web applications for which one basically
+cannot assume what type of machines will run your code.
+
+Therefore, although the technical details in this lecture are not directly
+related to Java virtual machine, the idea is important.
+
+
+1. SECD Architecture
+
+Purpose:
+   To execute the complied code on an abstract machine.
+
+Difference from an interpreter:
+   The compiled code can be executed many times and
+code optimization is also possible.
+
+The SECD machine is built using four stacks:
+
+s    Stack used for evaluation of expressions
+e    Environment used to store the current value list
+c    Control used to store the instructions
+d    Dump used to store suspended invocation context.
+
+
+The main operations that are supported by SECD machine are:
+
+OP's    Description                Purpose
+______________________________________________________________
+NIL     push a nil pointer
+LD	load from the environment /* get a value from context*/
+LDC     load constant
+LDF     load function             /* get a closure */
+
+AP 	apply function
+RTN     return                    /* restore calling env */
+
+SEL     select in if statement
+JOIN    rejoin main control       /* used with SEL */
+
+RAP     recursive apply
+DUM     create a dummy env        /* used with RAP */
+_______________________________________________________________
+
+Plus builtin functions +,  *, ATOM, CAR, CONS, EQ, etc.
+
+
+
+Each operation is defined by its effect on the four stacks
+
+      s e c  d -> s' e' c' d'
+
+Each stack is represented by an s-expression with the dot
+notation where the leftmost position denotes the top of the
+stack.
+
+
+
+A.  Push Objects to Stack
+
+
+Compilation Rules:
+    (a) A nil is compiled to (NIL);
+    (b) A number (or a constant) x is compiled to (LDC x);
+    (c) An identifier is compiled to (LD (i.j))
+        where (i.j) is an index into stack e.
+
+
+Stack Operations:
+
+NIL	s e (NIL.c) d        ->  (nil.s) e c d
+LDC	s e (LDC x.c) d      ->  (x.s) e c d
+LD 	s e (LD (i.j).c) d   ->  (locate((i.j),e).s) e c d
+
+"Locate" is an auxiliary function. It returns the jth element of
+the ith sublist in e.
+
+Note: roughly, e is a list of sublists each of which is a list of
+      actual parameters.   Thus, e corresponds to the value list in
+      our interpreter. There will be no name list here, as each occurrence
+      of a formal parameter will be compiled to LD (i.j) and by
+      locate(i.j) the corresponding actual parameter is found.
+
+      More details will be given soon.
+
+
+B.  Built-in Functions
+
+Compilation Rule:
+  A builtin function of the form
+	(OP e1 ... ek)
+is compiled to
+        ek' || ... || e1' || (OP)
+where A||B means append(A,B) and ei' is the compiled code for ei.
+
+The notation (of reversing arguments and operator)
+is the standard reverse Polish notation.
+
+
+Example:
+    (* (+ 6 2) 3) is compiled to (LDC 3 LDC 2 LDC 6 + *).
+
+To perform an operation is to pop up the front element(s)
+from s, perform the operation, and put the result back to s.
+
+For a unary operator OP,
+       (a.s) e (OP.c) d   ->   ((OP a).s) e c d
+
+For a binary operator OP,
+       (a b.s) e (OP.c) d   ->   ((a OP b).s) e c d
+
+
+
+Example.
+    s e (LDC 3 LDC 2 LDC 6 + *.c) d
+-> (3.s) e (LDC 2 LDC 6 + *.c) d
+-> (2 3.s) e (LDC 6 + *.c) d
+-> (6 2 3.s) e (+ *.c) d
+-> (8 3.s) e (*.c) d
+-> (24.s) e c d
+
+
+
+Example.
+
+Suppose we have e = ((1 3) (4 (5 6))). We will explain how we get such an e
+later.
+
+s	  ((1 3) (4 (5 6))) (LD (2.2) CAR LD (1.1) ADD.c) d   ->
+((5 6).s) ((1 3) (4 (5 6))) (CAR LD (1.1) ADD.c)          d   ->
+(5.s)     ((1 3) (4 (5 6))) (LD (1.1) ADD.c)              d   ->
+(1 5.s)   ((1 3) (4 (5 6))) (ADD.c)                       d   ->
+(6.s)     ((1 3) (4 (5 6))) c                             d   ->
+
+
+
+
+C. The special function IF_THEN_ELSE
+
+Compilation Rule:
+      (if e1 e2 e3)
+is compiled to
+     e1' || (SEL) || (e2' || (JOIN)) || (e3' || (JOIN))
+
+Example.  (if (atom 5) 9 7) is compiled to
+          (LDC 5 ATOM SEL (LDC 9 JOIN) (LDC 7 JOIN))
+
+
+Stack Operations:
+SEL 	(x.s) e (SEL ct cf.c) d   ->  s e c' (c.d)
+                 where c' = ct if x is T, and cf if x is F
+JOIN 	s e (JOIN.c) (cr.d)  ->  s e cr d
+
+Example.
+s     e  (LDC 5 ATOM SEL (LDC 9 JOIN) (LDC 7 JOIN).c)   d ->
+(5.s) e  (ATOM SEL (LDC 9 JOIN) (LDC 7 JOIN).c)         d ->
+(T.s) e  (SEL (LDC 9 JOIN) (LDC 7 JOIN).c)              d ->
+s     e  (LDC 9 JOIN)                               (c.d) ->
+(9.s) e  (JOIN)                                     (c.d) ->
+(9.s) e  c                                              d ->
+
+
+
+D.  Nonrecursive Functions
+
+Compilation Rule:
+
+A lambda function (lambda plist body) is compiled to
+     (LDF) || (body' || (RTN))
+where body' is the compiled code for body.
+
+Example. (lambda (x y) (+ x y)) is compiled to
+               (LDF (LD (1.2) LD (1.1) + RTN))
+
+
+We will explain why LD (1.2) and LD (1.1) a little later.
+
+
+A function application (e e1 ... ek) is compiled to
+(NIL) || ek' || (CONS) || ... || e1' || (CONS) || e' || (AP)
+
+
+Stack Operations:
+
+LDF 	s e (LDF f.c) d            ->  ((f.e).s) e c d
+AP  	((f.e') v.s) e (AP.c) d    ->  NIL (v.e') f (s e c.d)
+RTN	(x.z) e' (RTN.q) (s e c.d) ->  (x.s) e c d
+
+
+Example. ((lambda (x y) (+ x y)) 2 3) compiles to
+      (NIL LDC 3 CONS LDC 2 CONS LDF (LD (1.2) LD (1.1) + RTN) AP)
+
+When this is executed:
+
+--    The code
+           NIL LDC 3 CONS LDC 2 CONS
+      collectively loads the list (2 3) into the s stack.
+
+--    LDF moves the compiled code of the body (the symbol f in Stack Op's),
+      along with the current context e into s
+
+--    AP makes it ready: executing the body (the code in f) in the extended
+      context (v.e') where v is the list of (fully evaluated) actual
+      parameters.
+
+
+The reason for
+         LD (1.2) LD (1.1) +
+
+We are compiling (+ x y). According to the formal parameter list in
+(lambda (x y) ...), any occurrence of y in the body should get its
+actual parameter in the second position in the parameter list,
+this is why 2 in LD (1.2). Since there is no other parameter list
+pushed into e, (2 3) is the last and thus first (from the left), this
+is why 1 in (1.2). Similar for LD (1.1).
+
+
+
+Example.  Let BODY below denote (LD (1.2) LD (1.1) + RTN).
+
+s e (NIL LDC 3 CONS LDC 2 CONS LDF BODY AP.c)     d   ->
+(nil.s) e (LDC 3 CONS LDC 2 CONS LDF BODY AP.c)   d   ->
+(3 nil.s) e (CONS LDC 2 CONS LDF BODY AP.c)       d   ->
+((3).s) e (LDC 2 CONS LDF BODY AP.c)              d   ->
+(2 (3).s) e (CONS LDF BODY AP.c)                  d   ->
+((2 3).s) e (LDF BODY AP.c)                       d   ->
+((BODY.e) (2 3).s) e (AP.c)                       d   ->
+NIL ((2 3).e) BODY                        (s e c.d)   =
+NIL ((2 3).e) (LD (1.2) LD (1.1) + RTN)   (s e c.d)   ->
+(locate((1.2),((2 3).e)).NIL) ((2 3).e) (LD (1.1) + RTN)
+                                        (s e c.d) =
+(3.NIL) ((2 3).e) (LD (1.1) + RTN)        (s e c.d)   ->
+(locate((1.1),((2 3).e)) 3.NIL) ((2 3).e) (+ RTN) (s e c.d)=
+(2 3.NIL) ((2 3).e) (+ RTN)               (s e c.d)   ->
+(5.NIL) ((2 3).e) (RTN)                   (s e c.d)   ->
+(5.s) e c d
+
+
+
+
+Since an let expression has the same semantics of an
+application, the compilation is essentially the same:
+
+(let (x1 ... xk) (e1 ... ek) exp)
+is compiled to
+(NIL) || ek' || (CONS) || ... || e1'
+             || (CONS LDF) || (e' || (RTN)) || (AP)
+
+
+
+
+E.  Recursive Functions (Optional)
+
+Compilation Rule:
+
+     (letrec (f1 ... fk) (e1 ... ek) exp)
+is compiled to
+     (DUM NIL) || ek' || (CONS) || ... || e1'
+                      || (CONS LDF) || (exp' || (RTN)) || (RAP)
+
+This is exactly the same as let, except DUM and RAP. It is
+also like an application
+	((lambda (f1 ... fk) exp) e1 ... ek)
+but permits recursion.
+
+
+Stack Operations:
+
+DUM	s e (DUM.c) d  ->  s (W.e) c d
+           where W has been called PENDING earlier
+
+RAP  	((f.(W.e)) v.s) (W.e) (RAP.c) d
+		->  nil rplaca((W.e),v) f (s e c.d)
+
+
+We know that a lambda function ei is to be compiled to
+	(LDF (... code for ei ... RTN))
+
+As a whole, a letrec expression is compiled to something
+that looks like the following code:
+        (DUM NIL LDF (... code for the body of ek ... RTN) CONS
+			......
+		 LDF (... code for the body of e1 ... RTN) CONS
+                 LDF (... code for the body of e1 ... RTN) CONS
+		 LDF (... code for exp .. RTN) RAP)
+
+When executed, DUM creats a dummy structure (W.e). The purpose
+is to have a dummy car part which will be later redirected to
+form a circular structure.
+
+NIL in the compiled code above is used again to build a new
+sublist for the values corresponding to the names (f1 ... fn).
+For each actual parameter ei, LDF pushes a closure onto S,
+including the code of ei and the environment (W.e) at that
+moment.  Let's denote Cei for the code  of ei and Ce for the
+code of exp, we then have the following S before ARP:
+	S = ((Ce.(W.e)) v.s)
+where v is the arg list which is ((Ce1.(W.e)) ... (Cek.(W.e))).
+The cdr's of all these elements in S point to the same structure
+
+	_______
+      ->|  |  | -> e
+	-------
+         |
+	 W
+
+In executing RAP, the pointer to W is redirected to v by rplaca.
+This results in a circular structure, i.e., the context for
+each Cei is to the arg list v itself, followed by old context
+e. This is how recursive calls can be executed: if in
+executing Cei, there is a reference to fj (recall that an
+identifier is compiled to the form (LD (n.j))), the index pair
+(n.j) will lead to the jth value in v (n is used to identify this v)
+whose code is Cej and context has v as the car part and e as the
+cdr part.
+
+
+
+
+F.  Generating Indices for Identifiers
+
+  Let's explain this by an example.
+
+  Example.
+	((lambda (z) ((lambda (x y) (+ (- x y) z)) 3 5)) 6)
+
+  In this example, x, y and z in the expression (+ (- x y) z)
+  are compiled respectively to
+
+            (LD (1.1)), (LD (1.2)), (LD (2.1))
+
+  This is because the indices are generated according to the order
+  in which functions are calls. In this case, the function
+  (lambda (z) ...), the outer function, is called first. The
+  variable z is a global variable to the inner function
+  (lambda (x y) ...), and thus the binding z to 6 should be pushed
+  into the e stack earlier.
+
+
+  Example.  Compiling
+      ((lambda (z) ((lambda (x y) (+ (- x y) z)) 3 5)) 6)
+  into SECD code
+
+  (e e1 ... ek) (a function application) is compiled to
+      (NIL) || ek' || (CONS) || ... || e1' || (CONS) || e' || (AP)
+
+  Thus, we should have
+      (NIL) || (LDC 6) || (CONS) || e' || (AP)
+  where e' is the compiled code for the function
+      (lambda (z) ((lambda (x y) (+ (- x y) z)) 3 5))
+
+  This is a lambda function which should be compiled to
+      (LDF) || (body' || (RTN)).
+  Thus, we have
+      e' =  (LDF) || (body' || (RTN))
+  where body' is the compiled code for
+      ((lambda (x y) (+ (- x y) z)) 3 5)
+  i.e.,
+      body' = (NIL) || (LDC 5) || (CONS) || (LDC 3) || (CONS)
+              ||  exp' || (AP)
+  where exp' is the compiled code for (lambda (x y) (+ (- x y) z)),
+  i.e.,
+      exp' = (LDF) || (body1' || (RTN))
+  where
+      body1' = (LD (2.1) LD (1.2) LD (1.1) SUB ADD)
+
+  We then get the compiled code for the whole expression by
+
+  (a) substitute body1' into exp' to get
+
+  exp' = (LDF
+            (LD (2.1) LD (1.2) LD (1.1) SUB ADD RTN)
+         )
+
+  (b) substitute exp' into body' to get
+
+  body' = (NIL LDC 5 CONS LDC 3 CONS
+              LDF
+              (LD (2.1) LD (1.2) LD (1.1) SUB ADD RTN)
+              AP
+          )
+
+  (c) substitute body' into e' to get
+
+  e' =  (LDF  (NIL LDC 5 CONS LDC 3 CONS
+               LDF
+               (LD (2.1) LD (1.2) LD (1.1) SUB ADD RTN)
+               AP
+               RTN)
+        )
+
+
+
+  Thus, the original expression is compiled to
+
+  (NIL LDC 6 CONS LDF
+                   (NIL LDC 5 CONS LDC 3 CONS
+                     LDF
+                      (LD (2.1) LD (1.2) LD (1.1) SUB ADD RTN)
+                     AP
+                    RTN)
+                  AP
+  )
