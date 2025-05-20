@@ -1,0 +1,3 @@
+letrec f = \x.x;
+       g = \x.\y. f x;
+in g 1 ()
