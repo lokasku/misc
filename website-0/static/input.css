@@ -1,0 +1,47 @@
+/* @import url('https://fonts.cdnfonts.com/css/helvetica-neue-55'); */
+@import url('https://fonts.cdnfonts.com/css/pp-neue-montreal');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    p, a, span, code, pre {
+        @apply text-base font-normal;
+    }
+
+    p {
+        @apply mt-2;
+    }
+
+    a {
+        @apply text-[#06c] hover:underline;
+    }
+
+    /* pre {
+        @apply border border-gray-200 bg-gray-50 rounded text-sm text-neutral-700 p-2 my-3;
+    } */
+    pre {
+        @apply text-sm text-neutral-700 my-3 ml-4;
+    }
+
+    ul {
+        @apply my-1 list-disc pl-8;
+    }
+
+    .ol-inline li, .ol-inline li a svg {
+        @apply inline !p-0;
+    }
+
+    svg path {
+        @apply fill-gray-300;
+    }
+
+    svg {
+        @apply w-auto h-6;
+    }
+
+    hr {
+        @apply border-dashed border-gray-300 my-4;
+    }
+}
