@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    h2, h3, h4 {
+        @apply break-words text-gray-600;
+    }
+    h2 {
+        @apply font-bold text-3xl pt-8;
+    }
+    h3 {
+        @apply font-semibold text-2xl mt-6;
+    }
+    h4 {
+        @apply font-semibold text-xl mt-4;
+    }
+    p, a, li {
+        @apply text-lg font-normal leading-relaxed py-2.5 text-slate-700;
+    }
+    a {
+        @apply font-medium text-[#06c] hover:underline;
+    }
+    hr {
+        @apply my-2 border-gray-400;
+    }
+    ul, ol {
+        @apply list-disc list-inside pl-9 py-2.5;
+    }
+    li {
+        @apply pt-0.5 pb-0;
+    }
+    img {
+        @apply rounded-[1rem] shadow-lg mt-6 mb-9;
+    }
+}

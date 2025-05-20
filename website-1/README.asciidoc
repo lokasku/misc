@@ -1,0 +1,1 @@
+This website is built in OCaml using the https://aantron.github.io/dream/[Dream] library to handle all the heavy lifting. https://github.com/yawaramin/dream-html[HTML] is also generated in OCaml—because it’s fun.
