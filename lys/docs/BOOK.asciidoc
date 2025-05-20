@@ -1,0 +1,680 @@
+= The Lys Programming Language
+:toc: left
+:toclevels: 3
+
+== Preamble: Introduction and Motivation
+
+Lys is defined as a purely functional programming language, drawing inspiration from the ML language family, particularly OCaml. The current implementation transpiles Lys code to OCaml, leveraging the OCaml compiler's optimizations and runtime system.
+
+Lys serves primarily as a platform for pedagogical exploration and language design experimentation, rather than aiming for direct competition with established languages. Its development provides a practical context for studying the standard phases of language implementation.
+
+For installation details and usage instructions, please refer to the step-by-step guide on the project https://github.com/lyslang/lys/wiki[wiki].
+
+= Chapter 1: Fundamentals
+
+This chapter specifies the elementary constructs of the Lys language. It provides definitions for primitive data types and their literal representations, explains value bindings within lexical scopes, details the semantics of predefined operators, and describes the usage of comments. Understanding these fundamentals is essential for progressing to more advanced language features.
+
+== 1.1. Primitive Data Types and Literals
+
+Lys includes a set of built-in, fundamental data types, known as primitive types. Each type represents a distinct set of values, and literals are the syntactic forms used to denote constant values of these types directly in code.
+
+The five primitive types are:
+
+* `Int`: Represents mathematical integers within implementation-defined limits.
+* `Float`: Represents floating-point numbers, typically conforming to the IEEE 754 standard (e.g., 64-bit double-precision), used to approximate real numbers.
+* `Bool`: Represents the boolean truth values `True` and `False`.
+* `String`: Represents finite sequences of characters (e.g., Unicode).
+* `Unit`: Represents a type with a single value, `()`, often signifying the absence of a meaningful computational result.
+
+=== 1.1.1. Integers (`Int`)
+
+Integer literals denote constant integer values.
+
+* **Syntax**: An optional sign (`+` or `-`) followed by one or more decimal digits (`0`-`9`). Unsigned literals are non-negative. Scientific notation uses `e` or `E` followed by an optional sign and an integer exponent (e.g., `12e3` means 12 * 10^3^).
+* **Semantics**: Literals evaluate to integer values within the `Int` type's representable range.
+
+.Integer Literal Examples
+[source]
+----
+1
+-1
++123
+0
+1e3
+-5E6
+----
+
+=== 1.1.2. Floating-Point Numbers (`Float`)
+
+Floating-point literals denote constant `Float` values.
+
+* **Syntax**: An optional sign (`+` or `-`), digits, exactly one decimal point (`.`), and following digits. Scientific notation is supported (e.g., `1.5e-3`).
+* **Constraint**: Digits must precede and follow the decimal point (e.g., `1.0`, `0.5`). Forms like `1.` or `.5` are invalid.
+* **Semantics**: Denotes values according to standard decimal representation, subject to the underlying floating-point format's precision and range (e.g., IEEE 754).
+
+.Float Literal Examples
+[source]
+----
+1.0
+-1.0
++123.456
+0.0
+1.0e3
+1.602e-19
+----
+
+=== 1.1.3. Booleans (`Bool`)
+
+Boolean literals denote the two truth values.
+
+* **Syntax**: The keywords `True` and `False` (case-sensitive).
+
+.Boolean Literal Examples
+[source]
+----
+True
+False
+----
+
+=== 1.1.4. Strings (`String`)
+
+String literals denote finite sequences of characters.
+
+* **Syntax**: A sequence of characters enclosed in double quotes (`"`).
+* **Constraints**: The sequence can contain any character allowed by the source encoding, except unescaped `"`. Escape sequences (e.g., `\n`, `\"`) represent special characters.
+
+.String Literal Examples
+[source]
+----
+"hello, world"
+""
+"\"Hello\""
+"Line1\nLine2"
+----
+
+=== 1.1.5. Unit (`Unit`)
+
+The `Unit` type has a single value, denoted by a specific literal.
+
+* **Syntax**: The literal `()` denotes the unique value of type `Unit`.
+
+.Unit Literal Example
+[source]
+----
+()
+----
+
+== 1.2. Value Bindings and Immutability
+
+A core principle in Lys is immutability: once a name (identifier) is bound to a value within a scope, that association is fixed. Neither the binding nor the value itself can be changed.
+
+The `def` keyword introduces a new, immutable value binding.
+
+* **Syntax**:
+    `def identifier [: type_annotation] = expression`
+* **Components**:
+    * `def`: Keyword initiating the binding.
+    * `identifier`: The name being bound.
+    * `type_annotation`: Optional type declaration (`: T`).
+    * `expression`: Evaluates to the value being bound.
+* **Type Checking**: If `type_annotation` `T` is present, the `expression`'s type must conform to `T`. Otherwise, the type is inferred from the `expression`.
+* **Evaluation**: The `expression` yields a value `v`, and the environment is extended with a binding from `identifier` to `v`.
+
+.Value Binding Examples
+[source]
+----
+def count = 10
+
+def epsilon : Float = 1.0e-8
+
+def isValid = True
+
+def goodMorning = "Доброе утро"
+
+def result = count + 5
+
+`
+Attempting to re-bind 'count' using 'def' in the same scope is invalid.
+Shadowing in inner scopes is permitted. 
+`
+----
+
+== 1.3. Operators and Expressions
+
+Expressions evaluate to values. Operators are typically infix symbols representing predefined functions. Evaluation order follows precedence and associativity rules.
+
+=== 1.3.1. Arithmetic Operators
+
+Standard operators for `Int` and `Float` types.
+
+* **Type Constraint**: Binary operators (`+`, `-`, `*`, `/`, `**`) require operands of the *same* numeric type. No implicit `Int`/`Float` conversion.
+* **Operators**:
+    * `+`: Addition.
+    * `-`: Subtraction.
+    * `*`: Multiplication.
+    * `/`: Division (`Int` division truncates towards zero; `Float` division follows IEEE 754).
+    * `**`: Exponentiation.
+    * `%`: Modulo (Remainder, `Int` only).
+* **Exceptions**: Division by zero (`0` or `0.0`) causes a runtime error. 
+
+.Arithmetic Expression Examples
+[source]
+----
+def i = 10
+def j = 3
+def quotient = i / j
+def remainder = i % j
+
+def x = 10.0
+def y = 3.0
+def float_quotient = x / y
+def power = 2.0 ** 3.0
+
+`
+def type_error_example = i + x
+
+^ Static type error
+`
+----
+
+=== 1.3.2. Logical Operators
+
+Operators for `Bool` values.
+
+* **Operators**:
+    * `&&`: Logical AND. Yields `True` iff both operands are `True`.
+    * `||`: Logical OR. Yields `True` if at least one operand is `True`.
+    * `!`: Logical NOT. Negates the operand.
+
+.Truth Table for Logical AND (`&&`)
+[options="header",cols="^,^,^"]
+|===
+| Operand `a` | Operand `b` | Result `a && b`
+| `True`      | `True`      | `True`
+| `True`      | `False`     | `False`
+| `False`     | `True`      | `False`
+| `False`     | `False`     | `False`
+|===
+
+.Truth Table for Logical OR (`||`)
+[options="header",cols="^,^,^"]
+|===
+| Operand `a` | Operand `b` | Result `a \|\| b`
+| `True`      | `True`      | `True`
+| `True`      | `False`     | `True`
+| `False`     | `True`      | `True`
+| `False`     | `False`     | `False`
+|===
+
+.Truth Table for Logical NOT (`!`)
+[options="header",cols="^,^"]
+|===
+| Operand `a` | Result `!a`
+| `True`      | `False`
+| `False`     | `True`
+|===
+
+.Logical Expression Examples
+[source]
+----
+def condition1 = True
+def condition2 = False
+
+def and_result = condition1 && condition2
+def or_result  = condition1 || condition2
+def not_result = !condition1
+def complex_logic = (condition1 || condition2) && !condition2
+----
+
+=== 1.3.3. Comparison Operators
+
+Compare operands of compatible types, yielding a `Bool`.
+
+* **Type Constraint**: Relational operators (`<`, `<=`, `>`, `>=`) require operands of the same ordered type (e.g., `Int`, `Float`). Equality operators (`==`, `!=`) require types supporting equality checks.
+* **Operators**:
+    * `<`: Less Than.
+    * `<=`: Less Than or Equal To.
+    * `>`: Greater Than.
+    * `>=`: Greater Than or Equal To.
+    * `==`: Equality (value equality for primitives).
+    * `!=`: Inequality (`!(a == b)`).
+
+.Comparison Expression Examples
+[source]
+----
+def item_count = 5
+def capacity = 10
+def is_below_limit = item_count < capacity
+def is_at_capacity = item_count >= capacity
+
+def name1 = "Lys"
+def name2 = "Lys"
+def are_names_equal = name1 == name2
+
+def val1 = 0.0
+def val2 = -0.0
+def zero_equality = val1 == val2
+
+def unit_check = () == ()
+def inequality_check = 5 != 10
+----
+
+== 1.4. Lexical Structure: Comments
+
+Comments are annotations in the source code intended for human readers. They are identified during lexical analysis but ignored by subsequent compilation phases and have no effect on program execution.
+
+* **Syntax**: Comments are delimited by backticks (`\``). A comment begins with `\``, continues across any number of lines, and terminates at the next occurrence of `\``.
+* **Nesting**: Comment delimiters typically do not nest.
+
+.Comment Examples
+[source]
+----
+`
+This is a comment block.
+It can span multiple lines.
+`
+
+def a = 0
+
+`
+Initialize counter variable.
+This comment explains the purpose of the next line.
+`
+
+def b : String = "hej"
+
+` Example of commenting out code:
+def old_config = load_settings("legacy.cfg")
+process(old_config)
+`
+def current_config = load_settings("default.cfg")
+
+----
+
+= Chapter 2: Functions
+
+This chapter focuses on functions, a central concept in Lys. Functions map input arguments to output values and are *first-class values* in Lys, meaning they can be treated like any other data: bound to names, passed as arguments, and returned as results.
+
+== 2.1. Defining Named Functions
+
+Named functions are introduced using the `def` keyword.
+
+* **Syntax**:
+    `def function_name parameter1 [parameter2 ...] [: function_type_signature] = body_expression`
+* **Components**:
+    * `def`: Keyword.
+    * `function_name`: Identifier for the function.
+    * `parameter1 [parameter2 ...]`: Space-separated formal parameter names.
+    * `function_type_signature`: Optional type annotation for parameters and return type, reflecting currying (Section 2.2).
+    * `body_expression`: The function's definition (computation).
+
+* **Example: Identity Function**
+[source]
+----
+`
+Identity function: returns its argument unchanged.
+'a' denotes a type variable (polymorphism).
+`
+
+def id x : a -> a = x
+----
+
+* **Example: Sum Function**
+[source]
+----
+`
+Adds two integers.
+`
+
+def sum a b : Int -> Int -> Int = a + b
+----
+The type `Int -> Int -> Int` is key to understanding currying.
+
+== 2.2. Currying
+
+Functions in Lys are *curried* by default. A function defined with multiple parameters is automatically treated as a sequence of nested functions, each taking one parameter.
+
+The definition `def sum a b = a + b` is equivalent to:
+1. `sum` takes `a` (type `Int`).
+2. Returns a *new function* that:
+    a. Takes `b` (type `Int`).
+    b. Returns `a + b` (type `Int`).
+
+The type `Int -> Int -> Int` reflects this: `Int -> (Int -> Int)`. This uniform, curried model simplifies the type system and enables partial application.
+
+== 2.3. Anonymous Functions (Lambda Abstractions)
+
+Functions can be created directly as values without a `def` binding using *lambda abstractions*.
+
+* **Syntax**:
+    `\ parameter1 [parameter2 ...] -> body_expression`
+* **Semantics**: Creates a function value.
+    * `\ param -> body`: Creates a single-argument function.
+    * `\ param1 param2 ... -> body`: Syntactic sugar for nested single-parameter lambdas (`\ param1 -> (\ param2 -> ... -> body)`), consistent with currying.
+* **Purpose**: Useful for inline helpers or arguments to higher-order functions.
+
+* **Examples**:
+[source]
+----
+def incrementer = \x -> x + 1
+def five = incrementer 4
+
+def anonymous_sum = \a b -> a + b
+def eight = anonymous_sum 5 3
+
+def is_positive = \f -> f > 0.0
+def check = is_positive 3.14
+
+def concat = \s1 s2 -> s1 + s2
+def greeting = concat "Hello, " "world!"
+
+def check_parity = \n -> if (n % 2 == 0) then "Even" else "Odd"
+def parity_of_4 = check_parity 4
+
+def immediate_result = (\x y -> x * y) 6 7
+----
+
+== 2.4. Partial Application
+
+Partial application is a direct result of currying. Applying a function to fewer arguments than its total number of parameters yields a new function awaiting the remaining arguments.
+
+Consider `sum a b = a + b`:
+
+* **Full Application**:
+[source]
+----
+def result = sum 5 3  ` result is 8 `
+----
+
+* **Partial Application**:
+[source]
+----
+`
+'add2' is bound to a function equivalent to '\b -> 2 + b'. 
+Its type is Int -> Int.
+`
+def add2 = sum 2
+
+def five = add2 3   ` five is 5 `
+def ten = add2 8    ` ten is 10 `
+----
+Partial application creates specialized functions from general ones.
+
+== 2.5. Higher-Order Functions
+
+*Higher-order functions* (HOFs) either accept functions as arguments or return functions as results. They are fundamental in Lys due to first-class functions and currying.
+
+* **Functions Returning Functions**: Partially applied curried functions (like `add2` above) are HOFs.
+
+* **Functions Accepting Functions**: Functions are often passed as arguments to abstract behavior.
+[source]
+----
+`
+Applies function 'f' twice to 'x'. 'f' is a function argument. 
+`
+def apply_twice f x : (Int -> Int) -> Int -> Int = f (f x)
+
+def double n = n * 2
+
+def twenty = apply_twice double 5 ` twenty is 20 `
+
+def seven = apply_twice (\n -> n + 1) 5 ` seven is 7 `
+----
+HOFs enable abstraction and reusable code patterns.
+
+= Chapter 3: Data Types
+
+This chapter introduces structured data types beyond primitives, focusing on *Algebraic Data Types* (ADTs). We examine built-in tuples and lists, user-defined ADTs (including polymorphic types), and type aliases.
+
+== 3.1. Algebraic Data Types (ADTs): An Overview
+
+ADTs are composite types built from other types. They combine types (as *product types*) or offer choices between types (as *sum types*).
+
+== 3.2. Tuples (Product Types)
+
+A tuple is a fixed-size, ordered collection where components can have different types.
+
+* **Syntax**: `(expression1, expression2, ..., expressionN)` (Requires N >= 2).
+* **Semantics**: Groups values. The type combines component types sequentially (e.g., `(Int, String)`). Order matters. Size is fixed.
+
+.Tuple Examples
+[source]
+----
+def pair = (1, "one")
+
+def triple = (true, 3.14, 0)
+
+def computed_tuple = (1 + 2, "hello, world")
+----
+
+* **Note**: `()` is the `Unit` value, not an empty tuple. `(value)` is just `value`.
+
+== 3.3. Lists (Recursive Types)
+
+Lists are ordered, homogeneous collections (all elements have the same type) of arbitrary length.
+
+* **Syntax**: `[expression1, expression2, ..., expressionN]` or `[]` (empty list).
+* **Semantics**: Represents sequences. Type is `List T` where `T` is the element type (e.g., `List Int`). `[]` is polymorphic (`List a`). Lists are typically recursive (empty or head::tail).
+
+.List Examples
+[source]
+----
+def numbers = [1, 2, 3, 4, 5]
+
+def names = ["Alice", "Bob", "Charlie"]
+
+def empty_list = []
+
+def calculated_list = [1*1, 2*2, 3*3]
+----
+
+== 3.4. User-Defined Algebraic Data Types
+
+Lys allows defining custom ADTs for domain-specific modeling, often combining sum and product patterns.
+
+* **Syntax**:
+[source]
+----
+def TypeName := [param1 ...] {
+    Constructor1 [as TypeExpr1];
+    ...
+    ConstructorN [as TypeExprN]
+}
+----
+* **Components**:
+    * `TypeName`: Name of the new type.
+    * `[param1 ...]`: Optional type parameters (e.g., `a`) for polymorphism (genericity).
+    * `ConstructorX`: Name used to create values of this type (often uppercase).
+    * `[as TypeExprX]`: Optional type(s) of data carried by the constructor. If omitted, the constructor takes no arguments.
+* **Constructors**: Define the different ways to build a value of the type. Each acts like a function returning a value of `TypeName`.
+* **Polymorphism**: Type parameters (`a`) allow defining generic types (e.g., `Maybe a`) instantiated later with concrete types (`Maybe Int`, `Maybe String`).
+
+* **Example: `Maybe` Type** (Represents optional values)
+[source]
+----
+def Maybe := a {
+    Just as a;  ` Carries a value of type 'a' `
+    Nothing     ` Carries no value `
+}
+
+def age1 = Just 30      ` Type: Maybe Int `
+def name1 = Just "Bob"  ` Type: Maybe String `
+def no_value = Nothing  ` Type: Maybe a (polymorphic) `
+----
+
+* **Example: Simple `Color` Type**
+[source]
+----
+def Color := { Red; Green; Blue }
+
+def c1 = Red
+def c2 = Blue
+----
+
+* **Example: `Shape` Type with Data**
+[source]
+----
+def Shape := {
+    Circle as Float;            ` Takes radius `
+    Rectangle as Float * Float  ` Takes width * height (as a tuple) `
+}
+
+def circ = Circle 10.0
+def rect = Rectangle (4.0, 5.0)
+----
+
+== 3.5. Type Aliases
+
+Type aliases provide alternative names for existing types, improving readability without creating new distinct types.
+
+* **Syntax**:
+    `def AliasName := ExistingType`
+
+.Type Alias Examples
+[source]
+----
+def Age := Int
+def Name := String
+def Point := (Float, Float)
+
+def user_age : Age = 30
+def user_name : Name = "Alice"
+def origin : Point = (0.0, 0.0)
+
+def another_age : Age = user_age ` Valid, Age is just an alias for Int `
+----
+
+= Chapter 4: Flow Control
+
+This chapter examines constructs for directing program execution flow: conditional expressions, pattern matching, local bindings, and recursion.
+
+== 4.1. Conditional Expressions (`if-then-else`)
+
+Provides basic choice based on a boolean predicate. It's an expression yielding a value.
+
+* **Syntax**:
+    `if <condition_expr> then <result_expr1> else <result_expr2>`
+* **Semantics**: Evaluates `<condition_expr>` (must be `Bool`). If `True`, evaluates `<result_expr1>`; if `False`, evaluates `<result_expr2>`.
+* **Type Constraint**: Both `<result_expr1>` and `<result_expr2>` must have the *same type*.
+
+.Conditional Expression Examples
+[source]
+----
+def a = 1
+def b = 2
+def c = if a > b then a else b
+
+`
+def d = if a > b then a else "b"
+
+^ Type Error!
+`
+----
+
+== 4.2. Pattern Matching (`match`)
+
+A powerful mechanism to inspect data structure, deconstruct values, and select code paths based on the value's form.
+
+* **Syntax**:
+[source]
+----
+match <scrutinee_expr> {
+    <pattern1> [if <guard1>] -> <result_expr1>;
+    ...
+    <patternN> [if <guardN>] -> <result_exprN>
+}
+----
+* **Semantics**: Evaluates `<scrutinee_expr>` to `v`. Sequentially compares `v` against each `<pattern>`. Selects the first case where the pattern matches *and* the optional `<guard>` (if present) evaluates to `True`. Binds variables from the pattern. Evaluates the corresponding `<result_expr>`.
+* **Type Constraint**: All `<result_expr>` branches must have the same type.
+
+=== 4.2.1. Pattern Syntax
+
+* **Variable** (`x`): Matches anything, binds value to `x`.
+* **Constructor** (`Just n`, `Rectangle (w, h)`): Matches ADT constructor values, binds contained data.
+* **List**: `[]` (empty); `[p1, ..., pN]` (exact size); `[head, ...tail]` (non-empty, binds head/tail).
+* **Tuple** (`(p1, ..., pN)`): Matches tuple of size N, binds components.
+* **Literal** (`1`, `"pega"`, `True`, `()`): Matches exact value. `()` matches `Unit`.
+* **Wildcard** (`_`): Matches anything, binds nothing.
+* **Or-Pattern** (`patternA; patternB -> expr`): Matches if value fits `patternA` OR `patternB`. Variables bound must be consistent.
+* **Nesting**: Patterns can be nested (e.g., `Just [x, ...xs]`).
+
+=== 4.2.2. Guards
+
+Optional `if <predicate>` after a pattern adds a boolean condition using variables bound by the pattern.
+
+.Pattern Matching Examples
+[source]
+----
+def describe_value x = match x {
+    0 -> "Zero";
+    1; 2; 3 -> "One, Two, or Three";
+    n if n > 3 && n < 10 -> "Between 4 and 9";
+    _ -> "Ten or more, or negative"
+}
+
+def result1 = describe_value 2
+def result2 = describe_value 7
+def result3 = describe_value 100
+
+def get_int_or_default maybe_val default_val = match maybe_val {
+    Just n -> n;
+    Nothing -> default_val
+}
+
+def age = Just 30
+def user_age = get_int_or_default age 99
+def unknown_age = get_int_or_default Nothing 99
+----
+
+== 4.3. Local Bindings (`let-in`)
+
+Introduces local, immutable bindings within an expression's scope for clarity and reuse.
+
+* **Syntax**:
+    `let <binding1>; [<binding2>; ...] in <body_expression>`
+    (where `<binding>` is `identifier = value_expression`)
+* **Semantics**: Bindings evaluated sequentially; binding `i` can use identifiers from `1` to `i-1`. Bindings are visible only in subsequent bindings and the `body_expression`. Result is the value of `body_expression`.
+* **Non-Recursion**: Standard `let` is non-recursive; cannot refer to identifier being defined within its own expression.
+
+.Let-in Expression Example
+[source]
+----
+def calculate_complex x y =
+    let
+        sum_xy = x + y;
+        prod_xy = x * y;
+        sum_sq = sum_xy * sum_xy
+    in
+        sum_sq - prod_xy
+
+def result = calculate_complex 3 4
+----
+
+== 4.4. Recursion
+
+A technique where a function calls itself. Primary method for iteration in Lys.
+
+* **Concept**: Solves problems by breaking them into smaller, self-similar subproblems solved by recursive calls.
+* **Components**:
+    1.  **Base Case(s)**: Condition(s) where the function returns directly, stopping recursion.
+    2.  **Recursive Step(s)**: Condition(s) where the function calls itself with arguments closer to a base case.
+* **Example: Factorial** (`n! = n * (n-1) * ... * 1`, `0! = 1`)
+[source]
+----
+def fact n =
+    if n == 0 then
+        1 ` Base case `
+    else
+        n * fact (n - 1) ` Recursive step `
+
+def five_factorial = fact 5
+----
+
+* **Caution**: Missing or unreachable base cases lead to infinite recursion and typically a stack overflow error.
+[source]
+----
+`
+Non-terminating example (no base case reached for n >= 0)
+`
+def sum_naturals_up n = n + sum_naturals_up (n + 1)
+----

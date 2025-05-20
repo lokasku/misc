@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2025 Aljebriq <143266740+aljebriq@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 Łukasz Bartkiewicz <lukasku@proton.me>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Nix
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: 0 0 * * 1
+
+jobs:
+  lockfile:
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    name: Update flake
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v16
+
+      - name: Update flake
+        uses: DeterminateSystems/update-flake-lock@v24
+        with:
+          pr-title: Update flake
+          commit-msg: Update flake
+          pr-body: |
+            ```
+            {{ env.GIT_COMMIT_MESSAGE }}
+            ```

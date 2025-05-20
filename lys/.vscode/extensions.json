@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "lyslang.lys",
+    "ocamllabs.ocaml-platform",
+    "esbenp.prettier-vscode"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "git.autofetch": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[dune]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[dune-project]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[dune-workspace]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.merlin]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.interface]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.ocamlbuild]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.ocamldoc]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.ocamlformat]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.ocamllex]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.menhir]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.opam]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.opam-install]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.META]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  },
+  "[ocaml.oasis]": {
+    "editor.defaultFormatter": "ocamllabs.ocaml-platform"
+  }
+}

@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2025 Aljebriq <143266740+aljebriq@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 Łukasz Bartkiewicz <lukasku@proton.me>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+name: Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/build.yml
+      - dune
+      - dune-project
+      - "**.ml"
+      - "**.mli"
+      - "**.mly"
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build.yml
+      - dune
+      - dune-project
+      - "**.ml"
+      - "**.mli"
+      - "**.mly"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: blacksmith-4vcpu-ubuntu-2204
+            display-name: Ubuntu
+            ocaml-version: 5.3.0
+            ocaml-compiler: ocaml-variants.5.3.0+options,ocaml-option-flambda
+            artifact: lys-x86_64-linux
+          - os: macos-latest
+            display-name: macOS
+            ocaml-version: 5.3.0
+            ocaml-compiler: ocaml-variants.5.3.0+options,ocaml-option-flambda
+            artifact: lys-arm64-darwin
+          - os: windows-latest
+            display-name: Windows
+            ocaml-version: 5.3.0
+            ocaml-compiler: ocaml-variants.5.3.0+options,ocaml-option-flambda
+            artifact: lys-x86_64-windows
+
+    runs-on: ${{ matrix.os }}
+    name: Build with OCaml ${{ matrix.ocaml-version }} on ${{ matrix.display-name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up OCaml ${{ matrix.ocaml-version }}
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: Install dependencies
+        run: opam install --deps-only .
+
+      - name: Build
+        run: opam exec -- dune build --profile release
+
+      - name: Upload the build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: _build/default/bin/main.exe

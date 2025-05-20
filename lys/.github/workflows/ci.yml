@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2025 Aljebriq <143266740+aljebriq@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 Łukasz Bartkiewicz <lukasku@proton.me>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  quality:
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    name: Quality Assurance
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: REUSE compliance check
+        uses: fsfe/reuse-action@v5
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ocaml-variants.5.3.0+options,ocaml-option-flambda
+
+      - name: Install dependencies
+        run: opam install --deps-only .
+
+      - name: Test
+        run: opam exec -- dune runtest
+
+      - name: Lint documentation
+        uses: ocaml/setup-ocaml/lint-doc@v3
+
+      - name: Lint formatting
+        uses: ocaml/setup-ocaml/lint-fmt@v3
+
+      - name: Lint opam
+        uses: ocaml/setup-ocaml/lint-opam@v3
